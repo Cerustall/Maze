@@ -45,11 +45,11 @@ struct Tile{
     color: Color
 }
 
-fn set_screen(map: Grid) -> Grid{
-    for y in map{
-        for mut x in y{
-            x.ty = TileType::Wall;
-            x.color = Color::White;
+fn set_screen(mut map: Grid) -> Grid{
+    for y in 0..map.len(){
+        for x in 0..y{
+            map[x][y].ty = TileType::Wall;
+            map[x][y].visited = false;
         }
     }
     return map;
@@ -79,7 +79,7 @@ fn main() {
     //Get current terminal dimensions
     let size = size().unwrap();
 
-    let mut map: Grid = vec![vec![Tile{ty: TileType::Wall, visited: false, color: Color::White}; size.0.into()]; size.1.into()]
+    let mut map: Grid = vec![vec![Tile{ty: TileType::Wall, visited: false, color: Color::White}; size.0.into()]; size.1.into()];
 
     map = set_screen(map);
     draw_screen(map);
