@@ -11,6 +11,8 @@ use std::{
     time
 };
 
+type Grid = Vec<Vec<Tile>>;
+
 //Tile options
 const WALL: char = '#';
 const BLANK: char = ' ';
@@ -39,18 +41,28 @@ enum TileType {
 #[derive(Clone)]
 struct Tile{
     ty: TileType,
-    visited: bool
+    visited: bool,
+    color: Color
 }
 
-fn draw_screen(map: Vec<Tile>){
-    let length = map.len();
-    let size = size().unwrap();
+fn set_screen(map: Grid) -> Grid{
+    for y in map{
+        for mut x in y{
+            x.ty = TileType::Wall;
+            x.color = Color::White;
+        }
+    }
+    return map;
+}
 
-    for y in 0..(size.1.into()){
-        match map[y].ty{
-            TileType::Wall => print!("{} ", SetBackgroundColor(Color::White)),
-            TileType::Blank => print!("{} ", ResetColor),
-            TileType::Player => print!("{} ", SetBackgroundColor(Color::Red))
+fn draw_screen(map: Grid){
+    for y in map{
+        for x in y{
+            match x.ty{
+                TileType::Wall => print!("{} ", SetBackgroundColor(Color::White)),
+                TileType::Blank => print!("{} ", ResetColor),
+                TileType::Player => print!("{} ", SetBackgroundColor(Color::Red))
+            }
         }
     }
 }
@@ -67,16 +79,11 @@ fn main() {
     //Get current terminal dimensions
     let size = size().unwrap();
 
-    for n in 0..size.0.into(){
-        print!("{} ", SetBackgroundColor(Color::White));
-    }
+    let mut map: Grid = vec![vec![Tile{ty: TileType::Wall, visited: false, color: Color::White}; size.0.into()]; size.1.into()]
 
-    /*
-    let mut map: Vec<Tile> = vec![Tile{ty: TileType::Wall, visited: false}; ((size.0)*(size.1)) as usize];
-
+    map = set_screen(map);
     draw_screen(map);
 
-    */
     let ten_millis = time::Duration::from_millis(5000);
     let now = time::Instant::now();
 
