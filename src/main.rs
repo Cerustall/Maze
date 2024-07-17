@@ -42,7 +42,6 @@ enum TileType {
 struct Tile{
     ty: TileType,
     visited: bool,
-    color: Color
 }
 
 fn set_screen(mut map: Grid) -> Grid{
@@ -79,7 +78,7 @@ fn main() {
     //Get current terminal dimensions
     let size = size().unwrap();
 
-    let mut map: Grid = vec![vec![Tile{ty: TileType::Wall, visited: false, color: Color::White}; size.0.into()]; size.1.into()];
+    let mut map: Grid = vec![vec![Tile{ty: TileType::Wall, visited: false,}; size.0.into()]; size.1.into()];
 
     map = set_screen(map);
     draw_screen(map);
