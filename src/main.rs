@@ -1,93 +1,117 @@
 use crossterm::{
-    terminal::{size, enable_raw_mode, disable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-    event::{poll, read, Event, KeyCode, KeyEventKind},
-    cursor::{MoveTo, Hide, Show},
-    style::{SetBackgroundColor, Color, ResetColor},
-    execute,
+    cursor::{Hide, Show}, execute, style::{Color, ResetColor, SetBackgroundColor},
+    terminal::{disable_raw_mode, enable_raw_mode, size, EnterAlternateScreen, LeaveAlternateScreen,},
+    event::{poll, read, Event, KeyCode, KeyEventKind}
 };
 use std::{
-    io::{stdout, Result},
-    thread,
-    time
+    io::stdout
 };
 
 type Grid = Vec<Vec<Tile>>;
 
-//Tile options
-const WALL: char = '#';
-const BLANK: char = ' ';
-const PLAYER: char = '@';
+const FRAME_DELAY: u64 = 0;
 
-//Fullscreen terminal dimensions
-const SIZE_X: usize = 260;
-const SIZE_Y: usize = 39;
+#[derive(Clone)]
+enum TileType{
+    Wall,
+    Passage,
+}
 
-//Player
+#[derive(Clone)]
+struct Tile{
+    ty: TileType,
+    occupied: bool,
+    visited: bool
+}
+
 #[derive(Clone)]
 struct Player{
     pos_x: u32,
     pos_y: u32
 }
 
-//Options for tiles to be displayed
-#[derive(Clone)]
-enum TileType {
-    Wall,
-    Blank,
-    Player
-}
+fn set_screen(map: &mut Grid, size: (u16, u16)) -> Grid{
+    let mut top_or_bottom: bool;
+    let mut either_side: bool;
+    let mut x_counter: u16 = 0;
+    let mut y_counter: u16 = 0;
+    
+    for y in &mut *map{
+        for x in y{
+            top_or_bottom = false;
+            either_side = false;
 
-//Actual tiles stored in array
-#[derive(Clone)]
-struct Tile{
-    ty: TileType,
-    visited: bool,
-}
+            if (x_counter == 0) || (x_counter == size.0-1){
+                top_or_bottom = true;
+            }
+            if (y_counter == 0) || (y_counter == size.1-1){
+                either_side = true;
+            }
+            
+            if either_side{
+                x.ty = TileType::Wall;
+            }else if top_or_bottom{
+                x.ty = TileType::Wall;
+            }else{
+                x.ty = TileType::Passage;
+            }
 
-fn set_screen(mut map: Grid) -> Grid{
-    for y in 0..map.len(){
-        for x in 0..y{
-            map[x][y].ty = TileType::Wall;
-            map[x][y].visited = false;
+            x_counter += 1;
         }
+        x_counter = 0;
+        y_counter += 1;
     }
-    return map;
+    y_counter = 0;
+    return map.to_vec();
 }
 
 fn draw_screen(map: Grid){
     for y in map{
         for x in y{
             match x.ty{
-                TileType::Wall => print!("{} ", SetBackgroundColor(Color::White)),
-                TileType::Blank => print!("{} ", ResetColor),
-                TileType::Player => print!("{} ", SetBackgroundColor(Color::Red))
+                TileType::Passage => print!("{} ", ResetColor),
+                TileType::Wall => print!("{} ", SetBackgroundColor(Color::White))
             }
         }
     }
 }
 
-fn main() {
+fn main(){
+    //Raw mode and alternate screen
     enable_raw_mode();
-    execute!(stdout(), EnterAlternateScreen);
-
-    let player = Player{
+        execute!(stdout(), EnterAlternateScreen);
+        print!("{}", Hide);
+     
+    //Player starting position top left
+    let _player: Player = Player{
         pos_x: 1,
         pos_y: 1,
     };
+
+    //Get terminal dimensions
+    let size: (u16, u16) = size().unwrap();
+
+    //Game 'map,' 2D vector with dimensions equal to terminal window game is run in
+    let mut map: Grid = vec![vec![Tile{ty: TileType::Passage, occupied: false, visited: false}; size.0.into()]; size.1.into()];
     
-    //Get current terminal dimensions
-    let size = size().unwrap();
-
-    let mut map: Grid = vec![vec![Tile{ty: TileType::Wall, visited: false,}; size.0.into()]; size.1.into()];
-
-    map = set_screen(map);
+    set_screen(&mut map, size);
     draw_screen(map);
 
-    let ten_millis = time::Duration::from_millis(5000);
-    let now = time::Instant::now();
-
-    thread::sleep(ten_millis);
-
+    loop{
+        if poll(std::time::Duration::from_millis(FRAME_DELAY)).expect("REASON") { 
+            if let Ok(Event::Key(key)) = read() {
+                if key.kind == KeyEventKind::Press
+                    && (
+                        key.code == KeyCode::Char('q')
+                        || key.code == KeyCode::Char('c')
+                        || key.code == KeyCode::Esc
+                        )
+                {
+                    break;
+                }
+            }
+        }
+    }
     execute!(stdout(), LeaveAlternateScreen);
     print!("{}", Show);
     disable_raw_mode();
