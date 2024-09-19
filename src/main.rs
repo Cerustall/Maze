@@ -52,6 +52,8 @@ fn set_screen(map: &mut Grid, size: (u16, u16)) -> Grid{
                 x.ty = TileType::Wall;
             }else if top_or_bottom{
                 x.ty = TileType::Wall;
+            }else if (x_counter % 3 == 0) || (y_counter % 2 == 0) {
+                x.ty = TileType::Wall;
             }else{
                 x.ty = TileType::Passage;
             }
@@ -61,8 +63,42 @@ fn set_screen(map: &mut Grid, size: (u16, u16)) -> Grid{
         x_counter = 0;
         y_counter += 1;
     }
-    y_counter = 0;
     return map.to_vec();
+}
+
+fn gen_maze(map: &mut Grid, size: (u16, u16)) -> Grid{
+    let mut top_or_bottom: bool;
+    let mut either_side: bool;
+    let mut x_counter: u16 = 0;
+    let mut y_counter: u16 = 0;
+    let mut direction: bool;
+    //true = right, false = down
+
+    for y in &mut *map{
+        for x in y{
+            top_or_bottom = false;
+            either_side = false;
+            direction = true;
+
+            if (x_counter == 0) || (x_counter == size.0-1){
+                top_or_bottom = true;
+            }
+            if (y_counter == 0) || (y_counter == size.1-1){
+                either_side = true;
+            }
+
+            if !top_or_bottom && !either_side{
+                match direction{
+                    true => (x+1).ty = TileType::Passage,
+                    //false => map[x_counter as usize][(y_counter + 1) as usize].ty = TileType::Passage
+                }
+            }
+            x_counter += 1;
+        }
+        x_counter = 0;
+        y_counter += 1;
+    }
+    map.to_vec()
 }
 
 fn draw_screen(map: Grid){
