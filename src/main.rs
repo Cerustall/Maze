@@ -6,12 +6,13 @@ use crossterm::{
 use std::{
     io::stdout
 };
+use rand::prelude::*;
 
 type Grid = Vec<Vec<Tile>>;
 
 const FRAME_DELAY: u64 = 0;
 
-#[derive(Clone)]
+#[derive(Clone,PartialEq)]
 enum TileType{
     Wall,
     Passage,
@@ -52,7 +53,7 @@ fn set_screen(map: &mut Grid, size: (u16, u16)) -> Grid{
                 x.ty = TileType::Wall;
             }else if top_or_bottom{
                 x.ty = TileType::Wall;
-            }else if (x_counter % 3 == 0) || (y_counter % 2 == 0) {
+            }else if (x_counter % 2 == 0) || (y_counter % 2 == 0) {
                 x.ty = TileType::Wall;
             }else{
                 x.ty = TileType::Passage;
@@ -73,24 +74,32 @@ fn gen_maze(map: &mut Grid, size: (u16, u16)) -> Grid{
     let mut y_counter: u16 = 0;
     let mut direction: bool;
     //true = right, false = down
+    let mut rng = rand::thread_rng();
+    let mut decider: u16 = 2;
 
-    for y in &mut *map{
-        for x in y{
+    for y in 0..size.0-2{
+        for x in 0..size.1-2{
             top_or_bottom = false;
             either_side = false;
             direction = true;
+            decider = rng.gen_range(0..2);
 
-            if (x_counter == 0) || (x_counter == size.0-1){
+            if (x == 0) || (x == size.0-1){
                 top_or_bottom = true;
             }
-            if (y_counter == 0) || (y_counter == size.1-1){
+            if (y == 0) || (y == size.1-1){
                 either_side = true;
             }
+            if (decider == 0){
+                direction = false
+            }else{
+                direction = true;
+            }
 
-            if !top_or_bottom && !either_side{
+            if !top_or_bottom && !either_side && (map[x as usize][y as usize].ty == TileType::Passage){
                 match direction{
-                    true => (x+1).ty = TileType::Passage,
-                    //false => map[x_counter as usize][(y_counter + 1) as usize].ty = TileType::Passage
+                    true => map[(x+1) as usize][y as usize].ty = TileType::Passage,
+                    false => map[x as usize][(y_counter + 1) as usize].ty = TileType::Passage
                 }
             }
             x_counter += 1;
@@ -131,6 +140,7 @@ fn main(){
     let mut map: Grid = vec![vec![Tile{ty: TileType::Passage, occupied: false, visited: false}; size.0.into()]; size.1.into()];
     
     set_screen(&mut map, size);
+    gen_maze(&mut map, size);
     draw_screen(map);
 
     loop{
