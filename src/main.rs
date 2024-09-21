@@ -1,6 +1,6 @@
 use crossterm::{
-    cursor::{Hide, Show}, execute, style::{Color, ResetColor, SetBackgroundColor},
-    terminal::{disable_raw_mode, enable_raw_mode, size, EnterAlternateScreen, LeaveAlternateScreen,},
+    cursor::{Hide, Show, MoveTo}, execute, style::{Color, ResetColor, SetBackgroundColor},
+    terminal::{disable_raw_mode, enable_raw_mode, size, ClearType, EnterAlternateScreen, LeaveAlternateScreen,Clear,},
     event::{poll, read, Event, KeyCode, KeyEventKind}
 };
 use std::{
@@ -10,7 +10,7 @@ use rand::prelude::*;
 
 type Grid = Vec<Vec<Tile>>;
 
-const FRAME_DELAY: u64 = 0;
+const FRAME_DELAY: u64 = 17;
 
 #[derive(Clone,PartialEq)]
 enum TileType{
@@ -27,8 +27,8 @@ struct Tile{
 
 #[derive(Clone)]
 struct Player{
-    pos_x: u32,
-    pos_y: u32
+    pos_x: usize,
+    pos_y: usize
 }
 
 fn set_screen(map: &mut Grid, size: (u16, u16)) -> Grid{
@@ -110,11 +110,15 @@ fn gen_maze(map: &mut Grid, size: (u16, u16)) -> Grid{
     map.to_vec()
 }
 
-fn draw_screen(map: Grid){
+fn draw_screen(map: &Grid){
+    print!("{}", Clear(ClearType::All));
     for y in map{
         for x in y{
             match x.ty{
-                TileType::Passage => print!("{} ", ResetColor),
+                TileType::Passage => match x.occupied{
+                    true => print!("{} ", SetBackgroundColor(Color::Red)),
+                    false => print!("{} ", ResetColor)
+                }
                 TileType::Wall => print!("{} ", SetBackgroundColor(Color::White))
             }
         }
@@ -128,22 +132,25 @@ fn main(){
         print!("{}", Hide);
      
     //Player starting position top left
-    let _player: Player = Player{
+    let mut player: Player = Player{
         pos_x: 1,
         pos_y: 1,
     };
+    
 
     //Get terminal dimensions
     let size: (u16, u16) = size().unwrap();
 
     //Game 'map,' 2D vector with dimensions equal to terminal window game is run in
     let mut map: Grid = vec![vec![Tile{ty: TileType::Passage, occupied: false, visited: false}; size.0.into()]; size.1.into()];
+    map[player.pos_y][player.pos_x].occupied = true;
     
     set_screen(&mut map, size);
     gen_maze(&mut map, size);
-    draw_screen(map);
-
+    
+    draw_screen(&map);
     loop{
+        print!("{}{}", MoveTo(0,0), Hide);
         if poll(std::time::Duration::from_millis(FRAME_DELAY)).expect("REASON") { 
             if let Ok(Event::Key(key)) = read() {
                 if key.kind == KeyEventKind::Press
@@ -154,6 +161,40 @@ fn main(){
                         )
                 {
                     break;
+                } 
+                
+                if key.kind == KeyEventKind::Press 
+                && key.code == KeyCode::Char('s') 
+                && (map[player.pos_y+1][player.pos_x].ty != TileType::Wall)
+                {
+                    map[player.pos_y][player.pos_x].occupied = false;
+                    player.pos_y += 1;
+                    map[player.pos_y][player.pos_x].occupied = true;
+                    draw_screen(&map);
+                }else if key.kind == KeyEventKind::Press 
+                && key.code == KeyCode::Char('d') 
+                && (map[player.pos_y][player.pos_x+1].ty != TileType::Wall)
+                {
+                    map[player.pos_y][player.pos_x].occupied = false;
+                    player.pos_x += 1;
+                    map[player.pos_y][player.pos_x].occupied = true;
+                    draw_screen(&map);
+                }else if key.kind == KeyEventKind::Press 
+                && key.code == KeyCode::Char('w') 
+                && (map[player.pos_y-1][player.pos_x].ty != TileType::Wall)
+                {
+                    map[player.pos_y][player.pos_x].occupied = false;
+                    player.pos_y -= 1;
+                    map[player.pos_y][player.pos_x].occupied = true;
+                    draw_screen(&map);
+                }else if key.kind == KeyEventKind::Press 
+                && key.code == KeyCode::Char('a') 
+                && (map[player.pos_y][player.pos_x-1].ty != TileType::Wall)
+                {
+                    map[player.pos_y][player.pos_x].occupied = false;
+                    player.pos_x -= 1;
+                    map[player.pos_y][player.pos_x].occupied = true;
+                    draw_screen(&map);
                 }
             }
         }
