@@ -1,7 +1,8 @@
 use crossterm::{
     cursor::{Hide, Show, MoveTo}, execute, style::{Color, ResetColor, SetBackgroundColor},
-    terminal::{disable_raw_mode, enable_raw_mode, size, ClearType, EnterAlternateScreen, LeaveAlternateScreen,Clear,},
-    event::{poll, read, Event, KeyCode, KeyEventKind}
+    terminal::{disable_raw_mode, enable_raw_mode, size, ClearType::Purge, EnterAlternateScreen, LeaveAlternateScreen,Clear,},
+    event::{poll, read, Event, KeyCode, KeyEventKind},
+    ExecutableCommand
 };
 use std::{
     io::stdout
@@ -16,6 +17,7 @@ const FRAME_DELAY: u64 = 17;
 enum TileType{
     Wall,
     Passage,
+    Win,
 }
 
 #[derive(Clone)]
@@ -109,6 +111,15 @@ fn gen_maze(map: &mut Grid, size: (u16, u16)) -> Grid{
         x_counter = 0;
         y_counter += 1;
     }
+    *map = set_win_area(map, size);
+    map.to_vec()
+}
+
+fn set_win_area(map: &mut Grid, size: (u16, u16)) -> Grid{
+    map[((size.1 - 2 ) as usize)][((size.0 - 2) as usize)].ty = TileType::Win;
+    map[((size.1 - 3 ) as usize)][((size.0 - 2) as usize)].ty = TileType::Passage;
+    map[((size.1 - 2 ) as usize)][((size.0 - 3) as usize)].ty = TileType::Passage;
+    map[((size.1 - 3 ) as usize)][((size.0 - 3) as usize)].ty = TileType::Passage;
     map.to_vec()
 }
 
@@ -120,10 +131,24 @@ fn draw_screen(map: &Grid){
                     true => print!("{} ", SetBackgroundColor(Color::Red)),
                     false => print!("{} ", ResetColor)
                 }
-                TileType::Wall => print!("{} ", SetBackgroundColor(Color::White))
+                TileType::Wall => print!("{} ", SetBackgroundColor(Color::White)),
+                TileType::Win => print!("{} ", SetBackgroundColor(Color::Green))
             }
         }
     }
+}
+
+fn has_won(pos_x: usize, pos_y: usize, size: (u16, u16)) -> bool{
+    if (pos_x == (size.0 - 2) as usize) && (pos_y == (size.1 - 2) as usize) {
+        return true;
+    }
+    return false;
+}
+
+fn you_won(){
+    SetBackgroundColor(Color::Black);
+    stdout().execute(Clear(Purge));
+    print!("You won! Well played!");
 }
 
 fn main(){
@@ -138,6 +163,7 @@ fn main(){
         pos_y: 1,
     };
     
+    let mut won: bool = false;
 
     //Get terminal dimensions
     let size: (u16, u16) = size().unwrap();
@@ -168,38 +194,50 @@ fn main(){
                 && key.code == KeyCode::Char('s') 
                 && (map[player.pos_y+1][player.pos_x].ty != TileType::Wall)
                 {
+                    
                     map[player.pos_y][player.pos_x].occupied = false;
                     player.pos_y += 1;
                     map[player.pos_y][player.pos_x].occupied = true;
                     draw_screen(&map);
+                    if has_won(player.pos_x, player.pos_y, size) {won = true; break;}
+
                 }else if key.kind == KeyEventKind::Press 
                 && key.code == KeyCode::Char('d') 
                 && (map[player.pos_y][player.pos_x+1].ty != TileType::Wall)
                 {
+                    
                     map[player.pos_y][player.pos_x].occupied = false;
                     player.pos_x += 1;
                     map[player.pos_y][player.pos_x].occupied = true;
                     draw_screen(&map);
+                    if has_won(player.pos_x, player.pos_y, size) {won = true; break;}
                 }else if key.kind == KeyEventKind::Press 
                 && key.code == KeyCode::Char('w') 
                 && (map[player.pos_y-1][player.pos_x].ty != TileType::Wall)
                 {
+                   
                     map[player.pos_y][player.pos_x].occupied = false;
                     player.pos_y -= 1;
                     map[player.pos_y][player.pos_x].occupied = true;
                     draw_screen(&map);
+                    if has_won(player.pos_x, player.pos_y, size) {won = true; break;}
                 }else if key.kind == KeyEventKind::Press 
                 && key.code == KeyCode::Char('a') 
                 && (map[player.pos_y][player.pos_x-1].ty != TileType::Wall)
                 {
+                    
                     map[player.pos_y][player.pos_x].occupied = false;
                     player.pos_x -= 1;
                     map[player.pos_y][player.pos_x].occupied = true;
                     draw_screen(&map);
+                    if has_won(player.pos_x, player.pos_y, size) {won = true; break;}
                 }
             }
         }
     }
+
+    if won {you_won();}
+
     execute!(stdout(), LeaveAlternateScreen);
     print!("{}", Show);
     disable_raw_mode();
