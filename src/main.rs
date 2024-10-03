@@ -90,13 +90,15 @@ fn gen_maze(map: &mut Grid, size: (u16, u16)) -> Grid{
             if (y == 0) || (y == size.1-1){
                 either_side = true;
             }
-            if (decider == 0){
+            if decider == 0 {
                 direction = false
             }else{
                 direction = true;
             }
 
-            if !top_or_bottom && !either_side && (map[x as usize][y as usize].ty == TileType::Passage){
+            //map[x as usize][y as usize].ty == TileType::Passage <- to go in brackets of below if statement if fix for generation doesnt work
+
+            if !top_or_bottom && !either_side && (y%2 != 0){
                 match direction{
                     true => map[(x+1) as usize][y as usize].ty = TileType::Passage,
                     false => map[x as usize][(y_counter + 1) as usize].ty = TileType::Passage
@@ -111,7 +113,6 @@ fn gen_maze(map: &mut Grid, size: (u16, u16)) -> Grid{
 }
 
 fn draw_screen(map: &Grid){
-    print!("{}", Clear(ClearType::All));
     for y in map{
         for x in y{
             match x.ty{
