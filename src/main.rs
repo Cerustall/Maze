@@ -145,17 +145,22 @@ fn has_won(pos_x: usize, pos_y: usize, size: (u16, u16)) -> bool{
     return false;
 }
 
-fn you_won(){
-    SetBackgroundColor(Color::Black);
-    stdout().execute(Clear(Purge));
-    print!("You won! Well played!");
+fn you_won(map: Grid){
+    for y in map{
+        for x in y{
+            print!("{} ", SetBackgroundColor(Color::Black))
+        }
+    }
+    stdout().execute(Clear(crossterm::terminal::ClearType::All));
+    print!("{}{}", MoveTo(0,0), Hide);
+    println!("You won! Well played!");
 }
 
 fn main(){
     //Raw mode and alternate screen
     enable_raw_mode();
-        execute!(stdout(), EnterAlternateScreen);
-        print!("{}", Hide);
+    execute!(stdout(), EnterAlternateScreen);
+    print!("{}", Hide);
      
     //Player starting position top left
     let mut player: Player = Player{
@@ -174,8 +179,8 @@ fn main(){
     
     set_screen(&mut map, size);
     gen_maze(&mut map, size);
-    
     draw_screen(&map);
+
     loop{
         print!("{}{}", MoveTo(0,0), Hide);
         if poll(std::time::Duration::from_millis(FRAME_DELAY)).expect("REASON") { 
@@ -188,7 +193,10 @@ fn main(){
                         )
                 {
                     break;
-                } 
+                } else if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('z'){
+                    won = true;
+                    break;
+                }
                 
                 if key.kind == KeyEventKind::Press 
                 && key.code == KeyCode::Char('s') 
@@ -236,9 +244,24 @@ fn main(){
         }
     }
 
-    if won {you_won();}
+    if won {you_won(map);}
 
-    execute!(stdout(), LeaveAlternateScreen);
-    print!("{}", Show);
-    disable_raw_mode();
+    loop{
+        if poll(std::time::Duration::from_millis(FRAME_DELAY)).expect("REASON") { 
+            if let Ok(Event::Key(key)) = read() {
+                if key.kind == KeyEventKind::Press
+                    && (
+                        key.code == KeyCode::Char('q')
+                        || key.code == KeyCode::Char('c')
+                        || key.code == KeyCode::Esc
+                        )
+                {
+                    break;
+                } 
+            }
+        }
+    }
+execute!(stdout(), LeaveAlternateScreen);
+print!("{}", Show);
+disable_raw_mode();
 }
